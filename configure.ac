@@ -1,0 +1,15 @@
+AC_INIT((semaphore),(0.1),(auhsoj05@gmail.com))
+
+AM_INIT_AUTOMAKE
+
+AC_PROG_CXX
+
+PKG_PREREQ(0.29)
+PKG_PROG_PKG_CONFIG(2.3.0)
+
+AC_CONFIG_FILES([Makefile])
+
+PKG_CHECK_MODULES([libgtk],[gtk4])
+
+
+AC_OUTPUT
