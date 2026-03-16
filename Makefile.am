@@ -1,5 +1,6 @@
+
 bin_PROGRAMS = semaphore
-semaphore_SOURCES = main.cpp
+semaphore_SOURCES = main.cpp main.h gtkui.h gtkui.cpp
 semaphore_CPPFLAGS=$(libgtk_CFLAGS)
 semaphore_LDADD=$(libgtk_LIBS)
 

@@ -4,14 +4,23 @@
 #include "sys/ioctl.h"
 #include "fcntl.h"
 #include "unistd.h"
-#include "gtk/gtk.h"
-#include "cairo.h"
 #include "math.h"
+#include "main.h"
+#include "gtkui.h"
 
-struct {float x,y;} leftstick,rightstick;
+struct vector leftstick,rightstick,offset;
 bool isRunning = true;
-int deadzone=64;
+bool letterMode = true;
+bool capitalize = false;
+float deadzone=64;
 pthread_t gui;
+
+u_int8_t oldkey;
+u_int8_t key;
+u_int8_t mask;
+
+
+
 u_int8_t getActiveSector(double x,double y){
 
     if (x*x+y*y <=deadzone*deadzone){
@@ -36,80 +45,114 @@ u_int8_t getActiveSector(double x,double y){
 
 }
 
+char getletter(){
+    u_int8_t left;
+    u_int8_t right;
+    left=getActiveSector(leftstick.x-127.5,leftstick.y-127.5);
+    right=getActiveSector(rightstick.x-127.5,rightstick.y-127.5);
+    key = ((left << 4)^right);
 
 
-static void draw_function(GtkDrawingArea *area,cairo_t *cr,int width, int height,gpointer data){
-    GdkRGBA color;
-    struct {double x,y;} leftcenter,rightcenter;
-    leftcenter ={127.5,127.5};
-    rightcenter={382.5,127.5};
-    double radius=127.5;
-    gtk_widget_get_color(GTK_WIDGET (area),&color);
-    gdk_cairo_set_source_rgba(cr,&color);
-    cairo_fill(cr);
 
-    for(int i=0;i<8;i++){
-    cairo_arc_negative(cr,leftcenter.x,leftcenter.y,radius,i*M_PI/4+M_PI/8,i*M_PI/4-M_PI/8);
-    cairo_line_to(cr,leftcenter.x+deadzone*cos(i*M_PI/4-M_PI/8),leftcenter.y+deadzone*sin(i*M_PI/4-M_PI/8));
-    cairo_arc(cr,leftcenter.x,leftcenter.y,deadzone,i*M_PI/4-M_PI/8,i*M_PI/4+M_PI/8);
-    cairo_line_to(cr,leftcenter.x+radius*cos(i*M_PI/4+M_PI/8),leftcenter.y+radius*sin(i*M_PI/4+M_PI/8));
-    cairo_stroke(cr);
-    cairo_arc_negative(cr,rightcenter.x,rightcenter.y,radius,i*M_PI/4+M_PI/8,i*M_PI/4-M_PI/8);
-    cairo_line_to(cr,rightcenter.x+deadzone*cos(i*M_PI/4-M_PI/8),rightcenter.y+deadzone*sin(i*M_PI/4-M_PI/8));
-    cairo_arc(cr,rightcenter.x,rightcenter.y,deadzone,i*M_PI/4-M_PI/8,i*M_PI/4+M_PI/8);
-    cairo_line_to(cr,rightcenter.x+radius*cos(i*M_PI/4+M_PI/8),rightcenter.y+radius*sin(i*M_PI/4+M_PI/8));
-    cairo_stroke(cr);
+    if(key!=oldkey){
+        oldkey=key;
 
+    mask = (letterMode<<6)|((letterMode&capitalize)<<5) | (letterMode<<4);
+    u_int8_t cmask = capitalize<<5;
+    switch(key){
+        case 0x32:
+            return '1'^mask;
+        case 0x31:
+            return '2'^mask;
+        case 0x38:
+            return '3'^mask;
+        case 0x37:
+            return '4'^mask;
+        case 0x63:
+            return '5'^mask;
+        case 0x53:
+            return '6'^mask;
+        case 0x43:
+            return '7'^mask;
+        case 0x21:
+            return '8'^mask;
+        case 0x28:
+            return '9'^mask;
+        case 0x57:
+            if(!letterMode){
+                letterMode=true;
+                break;
+            }return 'j'^cmask;
+
+        case 0x72:
+            if(letterMode){return 'k'^cmask;}
+            return '0';
+        case 0x62:
+            return 'l'^cmask;
+        case 0x52:
+            return 'm'^cmask;
+        case 0x42:
+            return 'n'^cmask;
+        case 0x18:
+            return 'o'^cmask;
+        case 0x71:
+            return 'p'^cmask;
+        case 0x61:
+            return 'q'^cmask;
+        case 0x51:
+            return 'r'^cmask;
+        case 0x41:
+            return 's'^cmask;
+        case 0x78:
+            return 't'^cmask;
+        case 0x68:
+            return 'u'^cmask;
+        case 0x47:
+            return 'v'^cmask;
+        case 0x65:
+            return 'w'^cmask;
+        case 0x64:
+            return 'x'^cmask;
+        case 0x58:
+            return 'y'^cmask;
+        case 0x54:
+            return 'z'^cmask;
+        case 0x67:
+            letterMode = false;
+            break;
+        case 0x33:
+            return ' ';
+        case 0x48:
+            return 0x08;
     }
-    cairo_set_line_cap(cr,CAIRO_LINE_CAP_ROUND);
-    cairo_set_line_width(cr,5);
-    cairo_move_to(cr,leftstick.x,leftstick.y);
-    cairo_line_to(cr,leftstick.x,leftstick.y);
-    cairo_stroke(cr);
-    //cairo_set_line_cap(cr,CAIRO_LINE_CAP_ROUND);
-    //cairo_set_line_width(cr,5);
-    cairo_move_to(cr,255+rightstick.x,rightstick.y);
-    cairo_line_to(cr,255+rightstick.x,rightstick.y);
-    cairo_stroke(cr);
+    }
+    return 0x0;
 }
+
+
+
+
+
+
+
+
 void* activate(void* data){
+    int guireturn;
 
-    GtkWidget *window;
-    GtkWidget *drawingArea;
-    cairo_t *cr;
-    window = gtk_window_new();
-    drawingArea=gtk_drawing_area_new();
-    gtk_drawing_area_set_content_width(GTK_DRAWING_AREA(drawingArea),510);
-    gtk_drawing_area_set_content_height(GTK_DRAWING_AREA(drawingArea),255);
-    gtk_drawing_area_set_draw_func(GTK_DRAWING_AREA(drawingArea),draw_function,NULL,NULL);
+    guireturn=runGui(&isRunning);
+    pthread_exit(&gui);
 
-    gtk_window_set_title(GTK_WINDOW(window), "Semaphore");
-    gtk_window_set_default_size(GTK_WINDOW(window),510,255);
-    gtk_window_set_child(GTK_WINDOW (window),drawingArea);
-    std::cout << "\r\t\t\t\rgtk activate"<<std::endl;
-    gtk_widget_set_visible(window,TRUE);
-    //gtk_window_present(GTK_WINDOW (window));
-    while(isRunning){
-        g_main_context_iteration(NULL,true);
-        gtk_widget_queue_draw(drawingArea);
-        usleep(1000);
-    }
-
-
-return 0;
 }
 
 int main(int argc,char **argv){
+    int trigger;
     int test;
+    bool debug = false;
     int status;
-    char string[] = "this";
+    char string[]="test";
     leftstick.x=0,leftstick.y=0,rightstick.x=0,rightstick.y=0;
-    int gstat=gtk_init_check();
-    if(gstat!=-1)
-        pthread_create(&gui,NULL,activate,string);
-    else
-        std::cout<<"gtk could not initialize:" <<gstat <<"\n";
     int gamepad;
+     pthread_create(&gui,NULL,activate,string);
     if (argc > 1){
         gamepad = open(argv[1],O_RDONLY);
         std::cout <<argv[1]<<"\n";
@@ -119,7 +162,9 @@ int main(int argc,char **argv){
     struct input_absinfo iabs;
     if(gamepad ==-1) std::cout <<gamepad;
     ioctl(gamepad,EVIOCGABS(ABS_X),&iabs);
-    std::cout<<"max value:"<<iabs.maximum<<"\n";
+    double middle =iabs.maximum;
+    offset.x=middle;offset.y=middle;
+
 
 
 
@@ -127,6 +172,7 @@ int main(int argc,char **argv){
     struct input_event events[8];
     while(isRunning){
     auto r1 = read(gamepad,events,sizeof events);
+    int oldtrigger=0;
     if(r1 != -1){
         int new_event_count = r1/sizeof(struct input_event);
         for(int evi=0;evi<new_event_count;evi++){
@@ -147,6 +193,15 @@ int main(int argc,char **argv){
                             rightstick.y=ev.value;
                             break;
                     }
+                        case EV_KEY:
+                    switch (ev.code){
+                        case BTN_TR:
+                        trigger=ev.value;
+                        if(oldtrigger==0){
+                           debug = trigger^debug;
+                        }
+                        oldtrigger=trigger;
+                    }
             }
 
 
@@ -154,8 +209,8 @@ int main(int argc,char **argv){
 
     }
     test=getActiveSector(leftstick.x-127.5,leftstick.y-127.5);
-
-    std::cout << "current position LSx:";
+    if(debug){
+        std::cout << "current position LSx:";
         std::cout.width(3);
         std::cout<<leftstick.x ;
         std::cout << "LSy:";
@@ -167,8 +222,16 @@ int main(int argc,char **argv){
         std::cout<<"RSy:";
         std::cout.width(3);
         std::cout<<rightstick.y;
-        std::cout<<"test:" << test <<"\r";
+        std::cout<<"test:" << test << std::hex << (int)mask<< "\r";
         std::cout.flush();
-    }
+        }else{
+            u_int8_t letter = getletter();
+            if(letter!=0x0){
+            std::cout << letter ;
+            std::cout.flush();}
+        }
+
     usleep(1000);
+    }
+
 }
