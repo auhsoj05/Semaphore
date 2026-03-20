@@ -1,0 +1,8 @@
+ime that uses a controler joysticks to output text inpired by 次元通信's semaphore flag signaling.
+
+build instructions:
+cd into the prject main directory
+meson setup build
+cd build
+ninja
+

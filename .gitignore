@@ -1,3 +1,5 @@
 *.swp
 *.kdev4
 /bin/
+/build/
+/.deps/

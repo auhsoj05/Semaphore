@@ -123,7 +123,7 @@ char getletter(){
         case 0x33:
             return ' ';
         case 0x48:
-            return 0x08;
+            return '\b';
     }
     }
     return 0x0;
