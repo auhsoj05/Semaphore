@@ -1,0 +1,14 @@
+[Addon]
+Name=Semaphore
+Category=InputMethod
+Version=@VERSION@
+Library=libsemaphore
+Type=SharedLibrary
+OnDemand=True
+Configurable=True
+
+[Addon/Dependencies]
+0=core:5.1.19
+
+[Addon/OptionalDependencies]
+0=spell
