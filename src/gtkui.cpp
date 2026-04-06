@@ -3,6 +3,7 @@
 #include "math.h"
 #include "main.h"
 #include "gtkui.h"
+#include "util.h"
 
 static void draw_function(GtkDrawingArea *area,cairo_t *cr,int width, int height,gpointer data){
     GdkRGBA color;

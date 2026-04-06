@@ -5,9 +5,12 @@ inc = include_directories('.')
 call = declare_dependency(include_directories: inc, sources:files('main.h'))
 ibusdep = dependency('ibus-1.0')
 fcitx_libd = get_option('prefix') / get_option('libdir') / 'fcitx5'
+libp=get_option('libdir') / meson.project_name()
 
-engine=shared_library('semaphore' ,'semaphore.h','semaphore.cpp',dependencies: fcitx_dep,\
-    install_dir : fcitx_libd, install : true, name_prefix: 'lib')
+utillib=shared_library('util','util.cpp', install_dir: libp, install: true)
+
+engine=shared_library('semaphore' ,'semaphore.cpp',dependencies: fcitx_dep,\
+    link_with: utillib,install_dir : fcitx_libd, install : true, name_prefix: 'lib', install_rpath:libp )
 
 gtkdep = dependency('gtk4')
-executable('semaphore','main.cpp','gtkui.cpp',link_with : engine,dependencies:[gtkdep,ibusdep])
+executable('semaphore','main.cpp','gtkui.cpp',link_with : utillib,dependencies:gtkdep)
